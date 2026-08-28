@@ -1,6 +1,7 @@
 mod agent;
 mod config;
 mod env;
+mod provider;
 mod session;
 mod tools;
 
