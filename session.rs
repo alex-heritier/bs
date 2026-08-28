@@ -30,9 +30,9 @@ fn escape(value: &str) -> String {
             '\n' => "\\n".chars().collect(),
             '\r' => "\\r".chars().collect(),
             '\t' => "\\t".chars().collect(),
-            character if character.is_control() => format!("\\u{:04x}", character as u32)
-                .chars()
-                .collect(),
+            character if character.is_control() => {
+                format!("\\u{:04x}", character as u32).chars().collect()
+            }
             character => vec![character],
         })
         .collect()

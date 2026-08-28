@@ -1,6 +1,20 @@
 use std::io;
 use std::process::Command;
 
+pub fn call(name: &str, arguments: &str) -> io::Result<String> {
+    let arguments: serde_json::Value =
+        serde_json::from_str(arguments).map_err(|error| io::Error::other(error.to_string()))?;
+    match name {
+        "bash" => bash(arguments["command"].as_str().unwrap_or_default()),
+        "str_replace_editor" => str_replace_editor(
+            arguments["path"].as_str().unwrap_or_default(),
+            arguments["old"].as_str().unwrap_or_default(),
+            arguments["new"].as_str().unwrap_or_default(),
+        ),
+        _ => Err(io::Error::other(format!("unknown tool: {name}"))),
+    }
+}
+
 pub fn bash(command: &str) -> io::Result<String> {
     command_output(Command::new("sh").args(["-c", command]))
 }

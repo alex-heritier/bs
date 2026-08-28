@@ -5,7 +5,8 @@ use std::path::PathBuf;
 
 const PROVIDER_URL: &str = "https://openrouter.ai/api/v1";
 const MODEL: &str = "openrouter/free";
-const TEMPLATE: &str = "provider-url=https://openrouter.ai/api/v1\nprovider-api-key=\nmodel=openrouter/free\n";
+const TEMPLATE: &str =
+    "provider-url=https://openrouter.ai/api/v1\nprovider-api-key=\nmodel=openrouter/free\n";
 
 #[derive(Debug)]
 pub struct Config {
@@ -55,9 +56,13 @@ impl Config {
             match crate::env::openrouter_api_key() {
                 Some(key) => {
                     config.provider_api_key = key;
-                    println!("Config has no API key; using OPENROUTER_API_KEY from the environment");
+                    println!(
+                        "Config has no API key; using OPENROUTER_API_KEY from the environment"
+                    );
                 }
-                None => println!("Config has no API key and OPENROUTER_API_KEY was not found in the environment"),
+                None => println!(
+                    "Config has no API key and OPENROUTER_API_KEY was not found in the environment"
+                ),
             }
         }
 

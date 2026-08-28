@@ -1,0 +1,13 @@
+[package]
+name = "bs"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "bs"
+path = "cli.rs"
+
+[dependencies]
+async-openai = { version = "0.41.3", default-features = false, features = ["chat-completion", "rustls"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

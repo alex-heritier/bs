@@ -1,18 +1,19 @@
 mod agent;
 mod config;
 mod env;
+mod provider;
 mod session;
 mod tools;
 
 use std::io::{self, BufRead, Write};
 
-fn main() {
-    let _config = config::Config::load().expect("could not load ~/.bs");
-    let mut session = session_path().map(|path| {
-        session::Session::open(&path).expect("could not open session file")
-    });
+#[tokio::main]
+async fn main() {
+    let config = config::Config::load().expect("could not load ~/.bs");
+    let mut session = session_path()
+        .map(|path| session::Session::open(&path).expect("could not open session file"));
     let stdin = io::stdin();
-    let mut agent = agent::Agent::new();
+    let mut agent = agent::Agent::new(&config);
 
     println!("No BS boostrapping!");
     println!("0.0.1-alpha");
@@ -25,9 +26,11 @@ fn main() {
             continue;
         }
 
-        let response = agent.respond(&line);
+        let response = agent.respond(&line).await.expect("provider request failed");
         if let Some(session) = &mut session {
-            session.append("user", &line).expect("could not write session");
+            session
+                .append("user", &line)
+                .expect("could not write session");
             session
                 .append("assistant", &response)
                 .expect("could not write session");

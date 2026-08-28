@@ -1,60 +1,57 @@
+use crate::config::Config;
+use crate::provider::{self, Message};
 use crate::tools;
 
-const SOURCE: &str = r#"#include <stdio.h>
-
-int main(void) {
-    puts("hello from bs");
-    return 0;
-}
-"#;
+const SYSTEM_PROMPT: &str = "You are a helpful software engineer assistant.";
 
 pub struct Agent {
-    step: usize,
+    provider: provider::Provider,
+    messages: Vec<Message>,
 }
 
 impl Agent {
-    pub fn new() -> Self {
-        Self { step: 0 }
+    pub fn new(config: &Config) -> Self {
+        Self {
+            provider: provider::Provider::new(
+                &config.provider_url,
+                &config.provider_api_key,
+                &config.model,
+            ),
+            messages: vec![Message::System(SYSTEM_PROMPT.to_owned())],
+        }
     }
 
-    pub fn respond(&mut self, _input: &str) -> String {
-        let response = match self.step {
-            0 => "I will inspect /tmp before changing anything.".to_owned(),
-            1 => tool("bash: ls -la /tmp", tools::bash("ls -la /tmp")),
-            2 => "The directory listing is complete. I will search for existing bs artifacts.".to_owned(),
-            3 => tool(
-                "bash: grep -R -n bs_mock /tmp",
-                tools::bash("grep -R -n bs_mock /tmp || true")
-                    .map(|output| if output.is_empty() { "no matches".to_owned() } else { output }),
-            ),
-            4 => "The search is complete. I will write a tiny C program in /tmp.".to_owned(),
-            5 => tool(
-                "str_replace_editor: write /tmp/bs_mock.c",
-                tools::str_replace_editor("/tmp/bs_mock.c", "", SOURCE),
-            ),
-            6 => "The C source is ready. I will compile it with the system C compiler.".to_owned(),
-            7 => tool(
-                "bash: cc /tmp/bs_mock.c -o /tmp/bs_mock",
-                tools::bash("cc /tmp/bs_mock.c -o /tmp/bs_mock"),
-            ),
-            8 => "Compilation succeeded. I will run the generated program.".to_owned(),
-            9 => tool("bash: /tmp/bs_mock", tools::bash("/tmp/bs_mock")),
-            10 => "The compiled program ran successfully and printed its greeting.".to_owned(),
-            _ => "The mock tool workflow is complete.".to_owned(),
-        };
+    pub async fn respond(&mut self, input: &str) -> Result<String, provider::Error> {
+        self.messages.push(Message::User(input.to_owned()));
 
-        self.step += 1;
-        response
-    }
-}
+        for _ in 0..16 {
+            let completion = self.provider.complete(&self.messages).await?;
+            if completion.tool_calls.is_empty() {
+                let content = completion.content.unwrap_or_default();
+                self.messages.push(Message::Assistant {
+                    content: Some(content.clone()),
+                    tool_calls: Vec::new(),
+                });
+                return Ok(content);
+            }
 
-fn tool<T>(name: &str, result: std::io::Result<T>) -> String
-where
-    T: ToString,
-{
-    match result {
-        Ok(output) if output.to_string().is_empty() => format!("[tool: {name}] ok"),
-        Ok(output) => format!("[tool: {name}]\n{}", output.to_string()),
-        Err(error) => format!("[tool: {name}] error: {error}"),
+            self.messages.push(Message::Assistant {
+                content: completion.content,
+                tool_calls: completion.tool_calls.clone(),
+            });
+            for call in completion.tool_calls {
+                let result = tools::call(&call.name, &call.arguments);
+                let result = match result {
+                    Ok(result) => result,
+                    Err(error) => format!("error: {error}"),
+                };
+                self.messages.push(Message::Tool {
+                    id: call.id,
+                    content: result,
+                });
+            }
+        }
+
+        Ok("tool call limit reached".to_owned())
     }
 }
