@@ -6,7 +6,7 @@ use std::path::PathBuf;
 const PROVIDER_URL: &str = "https://openrouter.ai/api/v1";
 const MODEL: &str = "openrouter/free";
 const TEMPLATE: &str =
-    "provider-url=https://openrouter.ai/api/v1\nprovider-api-key=\nmodel=openrouter/free\n";
+    "provider-url=https://openrouter.ai/api/v1\nprovider-api-key=\nmodel=openrouter/free\n# for offline local inference use: provider-url=embed and model=HuggingFaceTB/SmolLM2-360M-Instruct (requires --features embed)\n";
 
 #[derive(Debug)]
 pub struct Config {
@@ -52,7 +52,10 @@ impl Config {
             }
         }
 
-        if config.provider_api_key.trim().is_empty() {
+        let is_embed = crate::embed_ai::is_embed_model(&config.model)
+            || config.provider_url.trim().to_lowercase() == "embed"
+            || config.provider_url.trim().to_lowercase() == "local";
+        if config.provider_api_key.trim().is_empty() && !is_embed {
             match crate::env::openrouter_api_key() {
                 Some(key) => {
                     config.provider_api_key = key;
@@ -61,9 +64,11 @@ impl Config {
                     );
                 }
                 None => println!(
-                    "Config has no API key and OPENROUTER_API_KEY was not found in the environment"
+                    "Config has no API key and OPENROUTER_API_KEY was not found in the environment (hint: use model=smollm2 or provider-url=embed for offline local inference)"
                 ),
             }
+        } else if is_embed {
+            println!("Embed mode detected (model={} url={}), no API key required", config.model, config.provider_url);
         }
 
         Ok(config)

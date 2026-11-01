@@ -1,3 +1,4 @@
+mod embed_ai;
 mod agent;
 mod config;
 mod env;
@@ -14,6 +15,11 @@ async fn main() {
         .map(|path| session::Session::open(&path).expect("could not open session file"));
     let stdin = io::stdin();
     let mut agent = agent::Agent::new(&config);
+    if embed_ai::is_embed_model(&config.model) || config.provider_url.trim().to_lowercase() == "embed" || config.provider_url.trim().to_lowercase() == "local" {
+        println!("Using local embed model: SmolLM2-360M (candle, CPU)");
+        #[cfg(not(feature = "embed"))]
+        println!("NOTE: binary was built without --features embed, run `cargo build --features embed`");
+    }
 
     println!("No BS boostrapping!");
     println!("0.0.1-alpha");

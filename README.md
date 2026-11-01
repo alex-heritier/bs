@@ -17,8 +17,17 @@ bs is not:
 bs is written in Rust so it can be resource efficient and small in binary size. It uses a single ~/.bs config file
 to configure model API url, model name, and model API key. It can optionally track chat sessions using a session .jsonl file.
 
-As a stretch goal, bs can optionally be built with an embedded local inference stack and model. Maybe llama-cpp Rust port
-if such a thing exists, and a Liquid small sub 500M model.
+bs can optionally be built with an embedded local inference stack and model via Candle (pure Rust, no system deps) and SmolLM2-360M-Instruct (<500M). Enable with `cargo build --features embed` (~700MB model auto-downloaded on first run via hf-hub to HF cache). No API key required in embed mode.
+
+Enable embed:
+```bash
+cargo build --features embed
+# ~/.bs config for offline:
+# provider-url=embed
+# model=HuggingFaceTB/SmolLM2-360M-Instruct
+./target/debug/bs
+# or: model=smollm2 provider-url=local also triggers embed
+```
 
 As another stretch goal, bs can either be built with or dynamically download additional extensions, for now the only one
 being a Telegram bot chat gateway. These extensions are downloaded from the github repo. This is not meant to be a

@@ -9,5 +9,15 @@ path = "cli.rs"
 
 [dependencies]
 async-openai = { version = "0.41.3", default-features = false, features = ["chat-completion", "rustls"] }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+candle-core = { version = "0.8", optional = true }
+candle-nn = { version = "0.8", optional = true }
+candle-transformers = { version = "0.8", optional = true }
+tokenizers = { version = "0.21", optional = true }
+hf-hub = { version = "0.4", features = ["tokio"], optional = true }
+
+[features]
+default = []
+embed = ["dep:candle-core", "dep:candle-nn", "dep:candle-transformers", "dep:tokenizers", "dep:hf-hub"]
